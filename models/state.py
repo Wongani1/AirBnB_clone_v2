@@ -1,35 +1,28 @@
 #!/usr/bin/python3
-"""Module for State class."""
-
-from sqlalchemy.ext.declarative import declarative_base
+"""This is the state class"""
 from models.base_model import BaseModel, Base
+from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String
 from models.city import City
-import shlex
-import models
+
 
 class State(BaseModel, Base):
-    """This is the class representing State
+    """This is the class for State
     Attributes:
         name: input name
     """
     __tablename__ = "states"
     name = Column(String(128), nullable=False)
-    cities = relationship("City", cascade='all, delete, delete-orphan',
-                          backref="state")
+    cities = relationship("City", cascade="all,delete", backref="state")
 
     @property
     def cities(self):
-        var = models.storage.all()
-        lista = []
-        result = []
-        for key in var:
-            city = key.replace('.', ' ')
-            city = shlex.split(city)
-            if (city[0] == 'City'):
-                lista.append(var[key])
-        for elem in lista:
-            if (elem.state_id == self.id):
-                result.append(elem)
-        return (result)
+        """  getter attribute cities that returns the list of
+        City instances with state_id equals to the current State.id """
+        from models import storage
+        allcities = storage.all(City)
+        c = []
+        for k, v in allcities.items():
+            if v.state_id == self.id:
+                c.append(v)
+        return c

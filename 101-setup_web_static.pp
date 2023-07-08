@@ -1,63 +1,78 @@
-#This Setups the web servers for the deployment of web_static
-exec { '/usr/bin/env apt -y update' : }
--> package { 'nginx':
-  ensure => installed,
+# puppet to install nginx and configure it to serve some content
+exec {'update':
+path     => '/usr/bin',
+command  => 'sudo apt-get -y update',
+provider => 'shell',
 }
--> file { '/data':
-  ensure  => 'directory'
+->
+package { 'apache2.2-common':
+ensure => absent,
 }
--> file { '/data/web_static':
-  ensure => 'directory'
+->
+package { 'nginx':
+ensure  => installed,
+require => Package['apache2.2-common'],
 }
--> file { '/data/web_static/releases':
-  ensure => 'directory'
+->
+service { 'nginx':
+ensure  => running,
+require => Package['nginx'],
 }
--> file { '/data/web_static/releases/test':
-  ensure => 'directory'
+->
+file { '/data/':
+ensure => 'directory',
 }
--> file { '/data/web_static/shared':
-  ensure => 'directory'
+->
+file { '/data/web_static/':
+ensure => 'directory',
 }
--> file { '/data/web_static/releases/test/index.html':
-  ensure  => 'present',
-  content => "<!DOCTYPE html>
-<html>
-  <head>
-  </head>
-  <body>
-    <p>Nginx server test</p>
-  </body>
-</html>"
+->
+file { '/data/web_static/shared/':
+ensure => 'directory',
 }
--> file { '/data/web_static/current':
-  ensure => 'link',
-  target => '/data/web_static/releases/test'
+->
+file { '/data/web_static/releases/':
+ensure => 'directory',
 }
--> exec { 'chown -R ubuntu:ubuntu /data/':
-  path => '/usr/bin/:/usr/local/bin/:/bin/'
+->
+file { '/data/web_static/releases/test/':
+ensure => 'directory',
 }
--> file { '/var/www':
-  ensure => 'directory'
+->
+exec {'html file':
+path     => ['/usr/bin', '/bin'],
+command  => 'sudo touch /data/web_static/releases/test/index.html',
+provider => 'shell',
 }
--> file { '/var/www/html':
-  ensure => 'directory'
+->
+exec {'write html':
+path     => ['/usr/bin', '/bin'],
+command  => 'sudo echo  "Holberton School" > /data/web_static/releases/test/index.html',
+provider => 'shell',
 }
--> file { '/var/www/html/index.html':
-  ensure  => 'present',
-  content => "<!DOCTYPE html>
-<html>
-  <head>
-  </head>
-  <body>
-    <p>Nginx server test</p>
-  </body>
-</html>"
+->
+exec {'symlink':
+path     => ['/usr/bin', '/bin'],
+command  => 'sudo ln -sf /data/web_static/releases/test/ /data/web_static/current',
+provider => 'shell',
 }
-exec { 'nginx_conf':
-  environment => ['data=\ \tlocation /hbnb_static {\n\t\talias /data/web_static/current;\n\t}\n'],
-  command     => 'sed -i "39i $data" /etc/nginx/sites-enabled/default',
-  path        => '/usr/bin:/usr/sbin:/bin:/usr/local/bin'
+->
+exec {'chown':
+path     => ['/usr/bin', '/bin'],
+command  => 'sudo chown -R ubuntu:ubuntu /data/',
+provider => 'shell',
 }
--> service { 'nginx':
-  ensure => running,
+->
+exec {'config':
+path     => ['/usr/bin', '/bin'],
+# lint:ignore:140chars
+command  => 'myc="\n\tlocation \/hbnb_static\/ {\n\t\talias \/data\/web_static\/current\/\;\n\t}\n"; st="server {"; sudo sed -i "s/^$st/$st$myc/" /etc/nginx/sites-enabled/default',
+# lint:endignore
+provider => 'shell',
+}
+->
+exec {'start nginx':
+path     => ['/usr/bin', '/bin', '/usr/sbin/'],
+command  => 'sudo service nginx start',
+provider => 'shell',
 }
